@@ -1,0 +1,9 @@
+{
+	"name": "denis-adf-dev",
+	"location": "eastus",
+	"identity": {
+		"type": "SystemAssigned",
+		"principalId": "372571ec-9db9-4bc4-8f05-9dfe826dc589",
+		"tenantId": "88f944d0-1278-45f9-88d8-dc81b5f77b17"
+	}
+}
