@@ -3,60 +3,47 @@ trigger:
     include:
       - main
 
+pool:
+  name: SelfPool
+
 stages:
 
-# =====================================================
-# STAGE 1: BUILD - Checkout adf_publish and Publish ARM
-# =====================================================
+# ============================================
+# STAGE 1: Build (Just checkout + publish repo)
+# ============================================
 - stage: Build
-  displayName: "Build ARM Templates"
+  displayName: "Build Stage"
 
   jobs:
-  - job: PublishARM
-    displayName: "Publish ARM Template Artifact"
-
-    pool:
-      name: SelfPool
-
+  - job: PublishRepo
+    displayName: "Checkout Repo"
     steps:
 
-    # ✅ Checkout adf_publish branch (ADF generates ARM here)
     - checkout: self
-      persistCredentials: true
 
+    # Debug: Confirm ARM templates exist
     - script: |
-        echo "Switching to adf_publish branch..."
-        git fetch origin
-        git checkout adf_publish
-      displayName: "Checkout adf_publish branch"
-
-    # ✅ Publish ARM templates from adf_publish branch
-    - task: PublishBuildArtifacts@1
-      displayName: "Publish ARM Template Artifact"
-      inputs:
-        pathToPublish: "$(Build.SourcesDirectory)"
-        artifactName: "adf_drop"
+        echo "===== FILES IN REPO ROOT ====="
+        dir "$(Build.SourcesDirectory)"
+      displayName: "DEBUG: List Root Files"
 
 
-# =====================================================
-# STAGE 2: DEPLOY TO UAT
-# =====================================================
+# ============================================
+# STAGE 2: Deploy to UAT
+# ============================================
 - stage: Deploy_UAT
   displayName: "Deploy to UAT"
   dependsOn: Build
 
   jobs:
   - job: DeployADF_UAT
-    pool:
-      name: SelfPool
+    displayName: "Deploy ARM to UAT ADF"
 
     steps:
-    - download: current
-      artifact: adf_drop
+    - checkout: self
 
-    # ✅ Deploy ARM Template to UAT
     - task: AzureResourceGroupDeployment@2
-      displayName: "Deploy ARM to UAT"
+      displayName: "Deploy ARM Template to UAT Data Factory"
       inputs:
         azureSubscription: "UATPRODConn"
         action: "Create Or Update Resource Group"
@@ -65,34 +52,32 @@ stages:
 
         templateLocation: "Linked artifact"
 
-        csmFile: "$(Pipeline.Workspace)/adf_drop/ARMTemplateForFactory.json"
-        csmParametersFile: "$(Pipeline.Workspace)/adf_drop/ARMTemplateParametersForFactory.json"
+        # ARM templates are in GitHub ROOT
+        csmFile: "$(Build.SourcesDirectory)/ARMTemplateForFactory.json"
+        csmParametersFile: "$(Build.SourcesDirectory)/ARMTemplateParametersForFactory.json"
 
         overrideParameters: >
           -factoryName "denis-adf-uat"
 
-        deploymentMode: "Incremental"
+        deploymentMode: Incremental
 
 
-# =====================================================
-# STAGE 3: DEPLOY TO PROD
-# =====================================================
+# ============================================
+# STAGE 3: Deploy to PROD
+# ============================================
 - stage: Deploy_PROD
   displayName: "Deploy to PROD"
   dependsOn: Deploy_UAT
 
   jobs:
   - job: DeployADF_PROD
-    pool:
-      name: SelfPool
+    displayName: "Deploy ARM to PROD ADF"
 
     steps:
-    - download: current
-      artifact: adf_drop
+    - checkout: self
 
-    # ✅ Deploy ARM Template to PROD
     - task: AzureResourceGroupDeployment@2
-      displayName: "Deploy ARM to PROD"
+      displayName: "Deploy ARM Template to PROD Data Factory"
       inputs:
         azureSubscription: "UATPRODConn"
         action: "Create Or Update Resource Group"
@@ -101,10 +86,11 @@ stages:
 
         templateLocation: "Linked artifact"
 
-        csmFile: "$(Pipeline.Workspace)/adf_drop/ARMTemplateForFactory.json"
-        csmParametersFile: "$(Pipeline.Workspace)/adf_drop/ARMTemplateParametersForFactory.json"
+        # ARM templates are in GitHub ROOT
+        csmFile: "$(Build.SourcesDirectory)/ARMTemplateForFactory.json"
+        csmParametersFile: "$(Build.SourcesDirectory)/ARMTemplateParametersForFactory.json"
 
         overrideParameters: >
           -factoryName "denis-adf-prd"
 
-        deploymentMode: "Incremental"
+        deploymentMode: Incremental
