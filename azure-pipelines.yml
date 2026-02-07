@@ -6,21 +6,31 @@ trigger:
 stages:
 
 # =====================================================
-# STAGE 1: BUILD - Publish ARM Artifact
+# STAGE 1: BUILD - Checkout adf_publish and Publish ARM
 # =====================================================
 - stage: Build
   displayName: "Build ARM Templates"
 
   jobs:
   - job: PublishARM
-    displayName: "Publish ADF ARM Artifact"
+    displayName: "Publish ARM Template Artifact"
 
     pool:
       name: SelfPool
 
     steps:
-    - checkout: self
 
+    # ✅ Checkout adf_publish branch (ADF generates ARM here)
+    - checkout: self
+      persistCredentials: true
+
+    - script: |
+        echo "Switching to adf_publish branch..."
+        git fetch origin
+        git checkout adf_publish
+      displayName: "Checkout adf_publish branch"
+
+    # ✅ Publish ARM templates from adf_publish branch
     - task: PublishBuildArtifacts@1
       displayName: "Publish ARM Template Artifact"
       inputs:
@@ -37,21 +47,12 @@ stages:
 
   jobs:
   - job: DeployADF_UAT
-    displayName: "Deploy ARM to UAT ADF"
-
     pool:
       name: SelfPool
 
     steps:
-    # ✅ Download artifact
     - download: current
       artifact: adf_drop
-
-    # ✅ DEBUG: Show files inside artifact
-    - script: |
-        echo "===== LISTING ARTIFACT FILES ====="
-        dir "$(Pipeline.Workspace)\adf_drop"
-      displayName: "DEBUG: List Artifact Files"
 
     # ✅ Deploy ARM Template to UAT
     - task: AzureResourceGroupDeployment@2
@@ -59,7 +60,6 @@ stages:
       inputs:
         azureSubscription: "UATPRODConn"
         action: "Create Or Update Resource Group"
-
         resourceGroupName: "multi-cloud-rg"
         location: "East US"
 
@@ -83,21 +83,12 @@ stages:
 
   jobs:
   - job: DeployADF_PROD
-    displayName: "Deploy ARM to PROD ADF"
-
     pool:
       name: SelfPool
 
     steps:
-    # ✅ Download artifact
     - download: current
       artifact: adf_drop
-
-    # ✅ DEBUG: Show files inside artifact
-    - script: |
-        echo "===== LISTING ARTIFACT FILES ====="
-        dir "$(Pipeline.Workspace)\adf_drop"
-      displayName: "DEBUG: List Artifact Files"
 
     # ✅ Deploy ARM Template to PROD
     - task: AzureResourceGroupDeployment@2
@@ -105,7 +96,6 @@ stages:
       inputs:
         azureSubscription: "UATPRODConn"
         action: "Create Or Update Resource Group"
-
         resourceGroupName: "multi-cloud-rg"
         location: "East US"
 
