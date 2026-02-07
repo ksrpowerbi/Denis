@@ -51,8 +51,8 @@ stages:
         location: "East US"
 
         templateLocation: "Linked artifact"
-        csmFile: "$(Pipeline.Workspace)/adf_drop/ARMTemplateForFactory.json"
-        csmParametersFile: "$(Pipeline.Workspace)/adf_drop/ARMTemplateParametersForFactory.json"
+        csmFile: "$(Pipeline.Workspace)/adf_drop/adf_drop/ARMTemplateForFactory.json"
+        csmParametersFile: "$(Pipeline.Workspace)/adf_drop/adf_drop/ARMTemplateParametersForFactory.json"
 
         overrideParameters: >
           -factoryName "denis-adf-uat"
@@ -85,9 +85,11 @@ stages:
         location: "East US"
 
         templateLocation: "Linked artifact"
-        csmFile: "$(Pipeline.Workspace)/adf_drop/ARMTemplateForFactory.json"
-        csmParametersFile: "$(Pipeline.Workspace)/adf_drop/ARMTemplateParametersForFactory.json"
+        csmFile: "$(Pipeline.Workspace)/adf_drop/adf_drop/ARMTemplateForFactory.json"
+        csmParametersFile: "$(Pipeline.Workspace)/adf_drop/adf_drop/ARMTemplateParametersForFactory.json"
 
+
+   
         overrideParameters: >
           -factoryName "denis-adf-prd"
 
