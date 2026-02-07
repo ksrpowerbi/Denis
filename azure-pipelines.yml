@@ -1,19 +1,20 @@
 trigger:
   branches:
     include:
-      - adf_publish
+      - main
 
 stages:
 
-# ===============================
-# Stage 1: Build (ARM Artifact)
-# ===============================
+# =====================================================
+# STAGE 1: BUILD - Publish ARM Artifact
+# =====================================================
 - stage: Build
   displayName: "Build ARM Templates"
 
   jobs:
   - job: PublishARM
-    displayName: "Publish ADF Artifact"
+    displayName: "Publish ADF ARM Artifact"
+
     pool:
       name: SelfPool
 
@@ -21,49 +22,51 @@ stages:
     - checkout: self
 
     - task: PublishBuildArtifacts@1
+      displayName: "Publish ARM Template Artifact"
       inputs:
-        pathToPublish: '$(Build.SourcesDirectory)'
-        artifactName: 'adf_drop'
-
-    - script: |
-        echo "Workspace:"
-        dir "$(Pipeline.Workspace)"
-
-        echo "Artifact folder:"
-        dir "$(Pipeline.Workspace)\adf_drop"
-
-        echo "Search ARM template:"
-        powershell -Command "Get-ChildItem -Recurse $(Pipeline.Workspace)\adf_drop | Where-Object { $_.Name -like 'ARMTemplateForFactory.json' }"
-      displayName: "DEBUG: Find ARM Template File"
+        pathToPublish: "$(Build.SourcesDirectory)"
+        artifactName: "adf_drop"
 
 
-# ===============================
-# Stage 2: Deploy to UAT
-# ===============================
+# =====================================================
+# STAGE 2: DEPLOY TO UAT
+# =====================================================
 - stage: Deploy_UAT
   displayName: "Deploy to UAT"
   dependsOn: Build
 
   jobs:
   - job: DeployADF_UAT
+    displayName: "Deploy ARM to UAT ADF"
+
     pool:
       name: SelfPool
 
     steps:
+    # ✅ Download artifact
     - download: current
       artifact: adf_drop
 
+    # ✅ DEBUG: Show files inside artifact
+    - script: |
+        echo "===== LISTING ARTIFACT FILES ====="
+        dir "$(Pipeline.Workspace)\adf_drop"
+      displayName: "DEBUG: List Artifact Files"
+
+    # ✅ Deploy ARM Template to UAT
     - task: AzureResourceGroupDeployment@2
-      displayName: "Deploy ARM to UAT ADF"
+      displayName: "Deploy ARM to UAT"
       inputs:
         azureSubscription: "UATPRODConn"
         action: "Create Or Update Resource Group"
+
         resourceGroupName: "multi-cloud-rg"
         location: "East US"
 
         templateLocation: "Linked artifact"
-        csmFile: "$(Pipeline.Workspace)/adf_drop/adf_drop/ARMTemplateForFactory.json"
-        csmParametersFile: "$(Pipeline.Workspace)/adf_drop/adf_drop/ARMTemplateParametersForFactory.json"
+
+        csmFile: "$(Pipeline.Workspace)/adf_drop/ARMTemplateForFactory.json"
+        csmParametersFile: "$(Pipeline.Workspace)/adf_drop/ARMTemplateParametersForFactory.json"
 
         overrideParameters: >
           -factoryName "denis-adf-uat"
@@ -71,36 +74,46 @@ stages:
         deploymentMode: "Incremental"
 
 
-# ===============================
-# Stage 3: Deploy to PROD
-# ===============================
+# =====================================================
+# STAGE 3: DEPLOY TO PROD
+# =====================================================
 - stage: Deploy_PROD
   displayName: "Deploy to PROD"
   dependsOn: Deploy_UAT
 
   jobs:
   - job: DeployADF_PROD
+    displayName: "Deploy ARM to PROD ADF"
+
     pool:
       name: SelfPool
 
     steps:
+    # ✅ Download artifact
     - download: current
       artifact: adf_drop
 
+    # ✅ DEBUG: Show files inside artifact
+    - script: |
+        echo "===== LISTING ARTIFACT FILES ====="
+        dir "$(Pipeline.Workspace)\adf_drop"
+      displayName: "DEBUG: List Artifact Files"
+
+    # ✅ Deploy ARM Template to PROD
     - task: AzureResourceGroupDeployment@2
-      displayName: "Deploy ARM to PROD ADF"
+      displayName: "Deploy ARM to PROD"
       inputs:
         azureSubscription: "UATPRODConn"
         action: "Create Or Update Resource Group"
+
         resourceGroupName: "multi-cloud-rg"
         location: "East US"
 
         templateLocation: "Linked artifact"
-        csmFile: "$(Pipeline.Workspace)/adf_drop/adf_drop/ARMTemplateForFactory.json"
-        csmParametersFile: "$(Pipeline.Workspace)/adf_drop/adf_drop/ARMTemplateParametersForFactory.json"
 
+        csmFile: "$(Pipeline.Workspace)/adf_drop/ARMTemplateForFactory.json"
+        csmParametersFile: "$(Pipeline.Workspace)/adf_drop/ARMTemplateParametersForFactory.json"
 
-   
         overrideParameters: >
           -factoryName "denis-adf-prd"
 
