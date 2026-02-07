@@ -61,3 +61,36 @@ stages:
 
         deploymentMode: Incremental
 
+
+# ============================================
+# STAGE 3: Deploy to PROD
+# ============================================
+- stage: Deploy_PROD
+  displayName: "Deploy to PROD"
+  dependsOn: Deploy_UAT
+
+  jobs:
+  - job: DeployADF_PROD
+    displayName: "Deploy ARM to PROD ADF"
+
+    steps:
+    - checkout: self
+
+    - task: AzureResourceGroupDeployment@2
+      displayName: "Deploy ARM Template to PROD Data Factory"
+      inputs:
+        azureSubscription: "UATPRODConn"
+        action: "Create Or Update Resource Group"
+        resourceGroupName: "multi-cloud-rg"
+        location: "East US"
+
+        templateLocation: "Linked artifact"
+
+        # ARM templates are in GitHub ROOT
+        csmFile: "$(Build.SourcesDirectory)/ARMTemplateForFactory.json"
+        csmParametersFile: "$(Build.SourcesDirectory)/ARMTemplateParametersForFactory.json"
+
+        overrideParameters: >
+          -factoryName "denis-adf-prd"
+
+        deploymentMode: Incremental
