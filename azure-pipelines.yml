@@ -3,11 +3,92 @@ trigger:
     include:
       - adf_publish
 
-pool:
-  name: SelfPool   # <-- replace with your exact agent pool name
+stages:
 
-steps:
-- task: PublishBuildArtifacts@1
-  inputs:
-    pathToPublish: '$(Build.SourcesDirectory)'
-    artifactName: 'adf_drop'
+# ===============================
+# Stage 1: Build (ARM Artifact)
+# ===============================
+- stage: Build
+  displayName: "Build ARM Templates"
+
+  jobs:
+  - job: PublishARM
+    displayName: "Publish ADF Artifact"
+    pool:
+      name: SelfPool
+
+    steps:
+    - checkout: self
+
+    - task: PublishBuildArtifacts@1
+      inputs:
+        pathToPublish: '$(Build.SourcesDirectory)'
+        artifactName: 'adf_drop'
+
+
+# ===============================
+# Stage 2: Deploy to UAT
+# ===============================
+- stage: Deploy_UAT
+  displayName: "Deploy to UAT"
+  dependsOn: Build
+
+  jobs:
+  - job: DeployADF_UAT
+    pool:
+      name: SelfPool
+
+    steps:
+    - download: current
+      artifact: adf_drop
+
+    - task: AzureResourceGroupDeployment@2
+      displayName: "Deploy ARM to UAT ADF"
+      inputs:
+        azureSubscription: "UATPRODConn"
+        action: "Create Or Update Resource Group"
+        resourceGroupName: "multi-cloud-rg"
+        location: "East US"
+
+        templateLocation: "Linked artifact"
+        csmFile: "$(Pipeline.Workspace)/adf_drop/ARMTemplateForFactory.json"
+        csmParametersFile: "$(Pipeline.Workspace)/adf_drop/ARMTemplateParametersForFactory.json"
+
+        overrideParameters: >
+          -factoryName "denis-adf-uat"
+
+        deploymentMode: "Incremental"
+
+
+# ===============================
+# Stage 3: Deploy to PROD
+# ===============================
+- stage: Deploy_PROD
+  displayName: "Deploy to PROD"
+  dependsOn: Deploy_UAT
+
+  jobs:
+  - job: DeployADF_PROD
+    pool:
+      name: SelfPool
+
+    steps:
+    - download: current
+      artifact: adf_drop
+
+    - task: AzureResourceGroupDeployment@2
+      displayName: "Deploy ARM to PROD ADF"
+      inputs:
+        azureSubscription: "UATPRODConn"
+        action: "Create Or Update Resource Group"
+        resourceGroupName: "multi-cloud-rg"
+        location: "East US"
+
+        templateLocation: "Linked artifact"
+        csmFile: "$(Pipeline.Workspace)/adf_drop/ARMTemplateForFactory.json"
+        csmParametersFile: "$(Pipeline.Workspace)/adf_drop/ARMTemplateParametersForFactory.json"
+
+        overrideParameters: >
+          -factoryName "denis-adf-prd"
+
+        deploymentMode: "Incremental"
