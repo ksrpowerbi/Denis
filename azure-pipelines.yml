@@ -4,7 +4,7 @@ trigger:
       - adf_publish
 
 pool:
-  vmImage: ubuntu-latest
+  name: SelfPool   # <-- replace with your exact agent pool name
 
 steps:
 - task: PublishBuildArtifacts@1
