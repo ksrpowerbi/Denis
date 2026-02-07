@@ -25,6 +25,17 @@ stages:
         pathToPublish: '$(Build.SourcesDirectory)'
         artifactName: 'adf_drop'
 
+    - script: |
+        echo "Workspace:"
+        dir "$(Pipeline.Workspace)"
+
+        echo "Artifact folder:"
+        dir "$(Pipeline.Workspace)\adf_drop"
+
+        echo "Search ARM template:"
+        powershell -Command "Get-ChildItem -Recurse $(Pipeline.Workspace)\adf_drop | Where-Object { $_.Name -like 'ARMTemplateForFactory.json' }"
+      displayName: "DEBUG: Find ARM Template File"
+
 
 # ===============================
 # Stage 2: Deploy to UAT
